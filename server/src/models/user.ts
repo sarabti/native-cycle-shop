@@ -1,4 +1,4 @@
-import { Document, Schema, model } from "mongoose";
+import { Document, Model, Schema, model } from "mongoose";
 import { hash, compare, genSalt } from "bcrypt";
 
 export interface UserDocument extends Document {
@@ -7,14 +7,19 @@ export interface UserDocument extends Document {
   password: string;
   verified: boolean;
   tokens: string[];
-  avatar?: { url: string; id: string };
+  avatar?: {
+    url: string;
+    id: string;
+  };
 }
 
-interface Methods {
+export interface UserMethods {
   comparePassword(password: string): Promise<boolean>;
 }
 
-const userSchema = new Schema<UserDocument, {}, Methods>(
+export type UserModel = Model<UserDocument, {}, UserMethods>;
+
+const userSchema = new Schema<UserDocument, UserModel, UserMethods>(
   {
     email: {
       type: String,
@@ -40,7 +45,9 @@ const userSchema = new Schema<UserDocument, {}, Methods>(
       id: String,
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
 
 userSchema.pre("save", async function () {
@@ -50,9 +57,12 @@ userSchema.pre("save", async function () {
   }
 });
 
-userSchema.methods.comparePassword = async function (password) {
-  return await compare(password, this.password);
+userSchema.methods.comparePassword = async function (
+  password: string,
+): Promise<boolean> {
+  return compare(password, this.password);
 };
 
-const UserModel = model("User", userSchema);
+const UserModel = model<UserDocument, UserModel>("User", userSchema);
+
 export default UserModel;
