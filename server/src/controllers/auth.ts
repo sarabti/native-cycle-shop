@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import jwt from "jsonwebtoken";
 import UserModel from "src/models/user";
 import { sendErrorRes } from "src/utils/helper";
 import crypto from "crypto";
@@ -57,4 +58,40 @@ export const verifyEmail: RequestHandler = async (req, res) => {
   await AuthVerificationTokenModal.findByIdAndDelete(authToken._id);
 
   res.json({ message: "Thanks for joining us, your email is now verified." });
+};
+
+export const signIn: RequestHandler = async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await UserModel.findOne({ email });
+  // Send error if user not found.
+  if (!user) return sendErrorRes(res, "Email/Password is incorrect.", 403);
+
+  // Check if the password is valid or not (because pass is in encrypted form).
+  const isMatched = await user.comparePassword(password);
+
+  if (!isMatched) return sendErrorRes(res, "Email/Password is incorrect.", 403);
+
+  const payload = { id: user._id };
+
+  const accessToken = jwt.sign(payload, "veryverysecret", {
+    expiresIn: "15m",
+  });
+  const refreshToken = jwt.sign(payload, "veryverysecret");
+
+  if (!user.tokens) user.tokens = [refreshToken];
+  else user.tokens.push(refreshToken);
+
+  await user.save();
+
+  res.json({
+    profile: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      verified: user.verified,
+      avatar: user.avatar?.url,
+    },
+    tokens: { refresh: refreshToken, access: accessToken },
+  });
 };
