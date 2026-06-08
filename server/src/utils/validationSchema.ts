@@ -26,3 +26,18 @@ export const newUserSchema = yup.object({
   email: yup.string().email("Invalid email!").required("Email is missing"),
   ...password,
 });
+
+const tokenAndId = {
+  id: yup.string().test({
+    name: "valid-id",
+    message: "Invalid user id",
+    test: (value) => {
+      return isValidObjectId(value);
+    },
+  }),
+  token: yup.string().required("Token is missing"),
+};
+
+export const verifyTokenSchema = yup.object({
+  ...tokenAndId,
+});

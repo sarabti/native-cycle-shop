@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import UserModel from "src/models/users";
+import UserModel from "src/models/user";
 import { sendErrorRes } from "src/utils/helper";
 import crypto from "crypto";
 import AuthVerificationTokenModal from "src/models/authVerificationToken";
@@ -36,4 +36,25 @@ export const createNewUser: RequestHandler = async (req, res) => {
   await mail.sendVerification(user.email, link);
 
   res.json({ message: "Please check your inbox." });
+};
+
+export const verifyEmail: RequestHandler = async (req, res) => {
+  const { id, token } = req.body;
+
+  // Find the token inside DB(using owner id).
+  const authToken = await AuthVerificationTokenModal.findOne({ owner: id });
+  // Send error if token not found.
+  if (!authToken) return sendErrorRes(res, "Unauthorized request!", 403);
+
+  const isMatched = await authToken.compareToken(token);
+
+  // // If not valid send error otherwise update user is verified.
+  if (!isMatched)
+    return sendErrorRes(res, "Unauthorized request, invalid token!", 403);
+  await UserModel.findByIdAndUpdate(id, { verified: true });
+
+  // Remove token from database.
+  await AuthVerificationTokenModal.findByIdAndDelete(authToken._id);
+
+  res.json({ message: "Thanks for joining us, your email is now verified." });
 };
