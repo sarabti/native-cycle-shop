@@ -5,6 +5,7 @@ import "src/db";
 import { sendErrorRes } from "src/utils/helper";
 
 const app = express();
+app.use(express.static("src/public"));
 app.use(express.json()); // read the data from all around the app
 app.use(express.urlencoded({ extended: false })); // Read the data from the form
 
